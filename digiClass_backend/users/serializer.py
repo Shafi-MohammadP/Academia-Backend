@@ -21,9 +21,8 @@ class SignUpSerializer(ModelSerializer):
         fields = "__all__"
 
     def create(self, validated_data):
-        print(validated_data, 'pppppppppppppppppppppp')
         email = validated_data["email"]
-
+        
         if CustomUser.objects.filter(email=email).exists():
             raise serializers.ValidationError(
                 {"email": "Email already exists"})
@@ -44,8 +43,6 @@ class SignUpSerializer(ModelSerializer):
                 "status": 400
             }
             return Response(data=data)
-            raise serializers.ValidationError(
-                {"Role": "Role field is misssing"})
 
         user = CustomUser.objects.create(
             username=validated_data["username"],
@@ -54,6 +51,7 @@ class SignUpSerializer(ModelSerializer):
         )
 
         user.set_password(password)
+        user.is_active = False
         user.save()
         return user
 

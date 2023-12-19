@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from urllib.parse import quote
 from rest_framework.authtoken.models import Token
+from rest_framework.decorators import api_view
 from django.shortcuts import get_object_or_404
 # import requests
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -8,6 +9,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 import jwt
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.contrib.sites.shortcuts import get_current_site
+from django.core.mail import EmailMessage
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.filters import SearchFilter
@@ -32,64 +38,132 @@ from django.contrib.auth import authenticate
 # Create your views here.
 
 
-class StudentSignUp(APIView):
+class Common_signup(APIView):
     def post(self, request):
-        serializer = SignUpSerializer(
-            data=request.data, context={'role': 'student'})
+        serializer = SignUpSerializer(data=request.data)
+        email = request.data['email']
+        if CustomUser.objects.filter(email=email).exists():
 
-        check = request.data['email']
-        if CustomUser.objects.filter(email=check).exists():
             data = {"Text": "Email already existed", "status": 400}
             return Response(data=data)
 
         if serializer.is_valid():
-            user_instance = serializer.save()
-            # Assuming 'user' is the field name in StudentProfile
-            student_data = {'user': user_instance.id}
-            print(student_data, 'student data-------------------------------->>>')
-            student_serializer = studentProfileSerializer(data=student_data)
-
-            if student_serializer.is_valid():
-                student_serializer.save()
-                data = {"Text": "Account Created Successfully", "status": 200}
-                return Response(data=data)
+            user = serializer.save()
+            # print(user.pk, 'pkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk')
+            current_site = get_current_site(request)
+            mail_subject = 'Activate Your Account'
+            message = render_to_string('user/Account_activation.html', {
+                'user': user,
+                'domain': current_site.domain,
+                'uid': urlsafe_base64_encode(force_bytes(user.id)),
+                'token': default_token_generator.make_token(user)
+            })
+            if email and '@' in email:
+                send_mail(
+                    mail_subject,
+                    message,
+                    'AcademiaLearning@gmail.com',
+                    [email],
+                    fail_silently=False,
+                    html_message=message
+                )
+                return Response({
+                    'Text': "We've sended a verification link to you email address",
+                    'data': serializer.data,
+                    'status': status.HTTP_200_OK
+                })
             else:
-                # If StudentProfile creation fails, delete the associated CustomUser
-                user_instance.delete()
-                return Response(student_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class TutorSignUp(APIView):
-    def post(self, request):
-        serializer = SignUpSerializer(
-            data=request.data, context={'role': 'tutor'})
-
-        check = request.data['email']
-        if CustomUser.objects.filter(email=check).exists():
+                data = {
+                    "Text": "Invalid Email Adress",
+                    "data": serializer.errors,
+                    "status": status.HTTP_400_BAD_REQUEST
+                }
+                return Response(data=data)
+        else:
             data = {
-                "Text": "Email already exist",
-                "status": 400
+                "Text": "Error Occured",
+                "data": serializer.errors,
+                "status": status.HTTP_400_BAD_REQUEST
             }
             return Response(data=data)
 
-        if serializer.is_valid():
-            user_instance = serializer.save()
-            # Assuming 'user' is the field name in TutorProfile
-            tutor_data = {'user': user_instance.id}
-            tutor_serializer = tutorProfileSerializer(data=tutor_data)
 
+@api_view(['GET'])
+def ActivateAccountView(request, uidb64, token):
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        # print(uid, "uidddddddddddddddddddddddddddddddddddddddddddd")
+        user = CustomUser._default_manager.get(id=uid)
+    except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+        user = None
+    # print(uid, user.pk, token,
+    #       "gptttttttttttttttttttttttttttttttttttttttttttttttttttttttt")
+    if user is not None and default_token_generator.check_token(user, token):
+        user.is_active = True
+        user.save()
+
+        if user.role == 'student':
+            student_data = {'user': user.id}
+            student_serializer = studentProfileSerializer(data=student_data)
+            if student_serializer.is_valid():
+                student_serializer.save()
+                print("student creation")
+            else:
+                user.delete()
+                print("studente deletion")
+                return Response(student_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        elif user.role == 'tutor':
+            tutor_data = {'user': user.id}
+            tutor_serializer = tutorProfileSerializer(data=tutor_data)
             if tutor_serializer.is_valid():
                 tutor_serializer.save()
-                data = {"Text": "Account Created Successfully", "status": 200}
-                return Response(data=data)
+                print("tutor creaion")
             else:
-                # If TutorProfile creation fails, delete the associated CustomUser
-                user_instance.delete()
-                return Response(tutor_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                user.delete()
+                print("tutor deleteion")
+                return Response(student_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        print(user, "user activated succesfulyy")
+        message = "Congrats, You have been succesfully registered"
+        redirect_url = 'http://localhost:5173/Login/' + \
+            '?message=' + message + '?token' + token
+    else:
+        print("Something FAiledd")
+        message = 'Invalid activation link'
+        redirect_url = 'http://localhost:5173/Login/' + '?message=' + message
+
+    return HttpResponseRedirect(redirect_url)
+
+
+# class TutorSignUp(APIView):
+#     def post(self, request):
+#         serializer = SignUpSerializer(
+#             data=request.data, context={'role': 'tutor'})
+
+#         check = request.data['email']
+#         if CustomUser.objects.filter(email=check).exists():
+#             data = {
+#                 "Text": "Email already exist",
+#                 "status": 400
+#             }
+#             return Response(data=data)
+
+#         if serializer.is_valid():
+#             user_instance = serializer.save()
+#             # Assuming 'user' is the field name in TutorProfile
+#             tutor_data = {'user': user_instance.id}
+#             tutor_serializer = tutorProfileSerializer(data=tutor_data)
+
+#             if tutor_serializer.is_valid():
+#                 tutor_serializer.save()
+#                 data = {"Text": "Account Created Successfully", "status": 200}
+#                 return Response(data=data)
+#             else:
+#                 # If TutorProfile creation fails, delete the associated CustomUser
+#                 user_instance.delete()
+#                 return Response(tutor_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GooglLogin(APIView):
@@ -181,18 +255,14 @@ class MyTokenObtainPairView(TokenObtainPairView):
 class studentProfileView(APIView):
     def get(self, request, user_id):
         student_profile = get_object_or_404(StudentProfile, user=user_id)
-        print(student_profile.bio)
         serializer = studentProfileSerializer(student_profile)
-        print(serializer.data)
-        return Response(serializer.data, status=status.HTTP_4)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class tutorProfileView(APIView):
     def get(self, request, user_id):
         tutor_profile = get_object_or_404(TutorProfile, user=user_id)
-        # print(tutor_profile.bio, '-------------------------------->>>>>>')
         serializer = tutorProfileSerializer(tutor_profile)
-        # print(serializer.data, '00000000000000000000000000000-----<<<<<<<<<')
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -209,3 +279,13 @@ class tutorListing(ListAPIView):
 class NewTutoraLisiting(ListAPIView):
     queryset = TutorProfile.objects.all()
     serializer_class = tutorProfileSerializer
+
+
+# class Authentication(APIView):
+#     permission_classes = (IsAuthenticated,)
+
+#     def get(self, request):
+#         content = {'user': str(request.user), 'userid': str(request.user.id), 'email': str(
+#             request.user.email), 'is_active': str(request.user.is_active)}
+#         return Response(content)
+#     print('chekked=========================================<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>')
