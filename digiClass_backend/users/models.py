@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from phonenumber_field.modelfields import PhoneNumberField
 # Create your models here.
 
 
@@ -17,8 +18,6 @@ class CustomUser(AbstractUser):
     username = models.CharField(max_length=20, unique=False)
     role = models.CharField(max_length=10, choices=ROLES, default='student')
     is_blocked = models.BooleanField(default=False, blank=True, null=True)
-    phone_number = models.CharField(
-        max_length=30, unique=True, blank=True, null=True)
     is_google = models.BooleanField(default=False, blank=True, null=True)
 
     USERNAME_FIELD = 'email'
@@ -29,10 +28,13 @@ class CustomUser(AbstractUser):
 
 
 class StudentProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        CustomUser, on_delete=models.CASCADE, null=True)
     bio = models.TextField(blank=True, null=True)
+    qualification = models.CharField(max_length=100, blank=True, null=True)
     profile_photo = models.FileField(
         upload_to='student_profiles/', blank=True, null=True)
+    mobile = PhoneNumberField(blank=True, null=True, default=None)
 
     def __str__(self):
         return self.user.email
@@ -41,9 +43,11 @@ class StudentProfile(models.Model):
 class TutorProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     bio = models.TextField(blank=True, null=True)
-    qualification = models.CharField(max_length=100, blank=True, null=True)
-    profile_image = models.FileField(
-        upload_to='instructor_profiles/', blank=True, null=True)
+    qualification = models.CharField(max_length=100, default="")
+    profile_photo = models.FileField(
+        upload_to='tutor_profiles/', blank=True, null=True)
+    mobile = PhoneNumberField(blank=True, null=True, default=None)
+    is_certificate = models.BooleanField(default=False)
     wallet = models.DecimalField(max_digits=15, decimal_places=2, default=0)
 
     def __str__(self):

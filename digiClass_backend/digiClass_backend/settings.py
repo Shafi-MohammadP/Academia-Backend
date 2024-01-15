@@ -46,6 +46,11 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework_simplejwt',
     'corsheaders',
+    'tutor',
+    'student',
+    'dashboard',
+    'notifications',
+    'course',
 ]
 
 MIDDLEWARE = [
@@ -86,7 +91,7 @@ WSGI_APPLICATION = 'digiClass_backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'digiDemo',
+        'NAME': 'academia',
         'USER': 'postgres',
         'PASSWORD': '6393',
         'HOST': 'localhost',

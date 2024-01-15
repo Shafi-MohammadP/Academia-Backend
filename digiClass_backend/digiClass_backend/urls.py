@@ -22,6 +22,11 @@ from rest_framework.authtoken.views import obtain_auth_token
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('user/', include('users.urls')),
+    path('tutor/', include('tutor.urls')),
+    path('dashboard/', include('dashboard.urls')),
+    path('notifications/', include('notifications.urls')),
+    path('student/', include('student.urls')),
+    path('course/', include('course.urls')),
 
 ]
 if settings.DEBUG:

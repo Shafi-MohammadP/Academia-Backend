@@ -212,7 +212,7 @@ class GooglLogin(APIView):
                 token = create_jwt_token(user)
 
                 data = {
-                    "Text": "Logined Succesfully",
+                    "Text": "Logined Successfully",
                     'status': 200,
                     'token': token,
                     'user': serializer.data,

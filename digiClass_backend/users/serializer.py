@@ -22,7 +22,7 @@ class SignUpSerializer(ModelSerializer):
 
     def create(self, validated_data):
         email = validated_data["email"]
-        
+
         if CustomUser.objects.filter(email=email).exists():
             raise serializers.ValidationError(
                 {"email": "Email already exists"})
@@ -66,8 +66,6 @@ class myTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        token['first_name'] = user.first_name
-        token['last_name'] = user.last_name
         token['username'] = user.username
         token['email'] = user.email
         token['is_admin'] = user.is_superuser
@@ -80,7 +78,7 @@ class myTokenObtainPairSerializer(TokenObtainPairSerializer):
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = '__all__'
+        fields = ["username", 'email', "role", "is_active"]
 
 
 class studentProfileSerializer(serializers.ModelSerializer):
