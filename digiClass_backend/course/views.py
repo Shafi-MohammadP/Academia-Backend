@@ -9,6 +9,8 @@ from .models import Course, CourseCategory
 from .serializer import CourseSerializer, CourseCategorySerializer, IndividualCourseSerializer
 from rest_framework import status
 from rest_framework.generics import RetrieveUpdateAPIView, CreateAPIView
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 # Create your views here.
 
 

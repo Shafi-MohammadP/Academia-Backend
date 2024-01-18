@@ -1,6 +1,8 @@
 from django.db import models
 from users.models import TutorProfile
 # Create your models here.
+from django.db.models.signals import post_save, post_delete, pre_save
+from django.dispatch import receiver
 
 
 class CourseCategory(models.Model):

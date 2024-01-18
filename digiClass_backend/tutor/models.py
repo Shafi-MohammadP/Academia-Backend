@@ -11,21 +11,6 @@ class Certificate(models.Model):
         upload_to='teacher_certificates/', blank=True, null=True)
     is_approved = models.BooleanField(default=False, null=True, blank=True)
 
-    def save(self, *args, **kwargs):
-        created = not self.pk
-        super(Certificate, self).save(*args, **kwargs)
-
-        if created:
-            notification = AdminNotifications(
-                name=f"New Teacher Registered: {self.tutor.user.username}",
-                is_opened=False,
-                notification_type='register',
-                key=self.id
-
-            )
-            print("working -------------------->>")
-            notification.save()
-
     def __str__(self):
         if self.tutor:
             return self.tutor.user.username
