@@ -2,17 +2,19 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from users.models import CustomUser, TutorProfile
 from .models import Certificate
-from .serializer import ApplicationFormSerializer, CertificateSerializer
+from .serializer import ApplicationFormSerializer, CertificateSerializer, CertificateTeacherSerializer
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from users.serializer import tutorProfileSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import RetrieveUpdateDestroyAPIView
-from course.models import Course
-from course.serializer import IndividualCourseSerializer
-
+from course.models import Course, VideosCourse
+from course.serializer import IndividualCourseSerializer, CourseVideoSerializer
+from rest_framework import generics
 # Create your views here.
+
+# Profile Views
 
 
 class TutorProfileShow(APIView):
@@ -136,12 +138,18 @@ class TeacherFormSubmission(APIView):
 
 class CertificateView(APIView):
     def get(self, request, tutor_id):
+        print(tutor_id, "------------------------------------>>>")
         try:
             certificate = Certificate.objects.get(tutor=tutor_id)
-            serializer = CertificateSerializer(certificate)
+            print(certificate, "certificate------------------------------------->>>>>")
+            serializer = CertificateTeacherSerializer(certificate)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        except:
-            return Response({"message": "Certificate Not Found", "status": status.HTTP_404_NOT_FOUND})
+        except Certificate.DoesNotExist:
+            data = {
+                "message": "Certificate Not found",
+                "status": status.HTTP_404_NOT_FOUND
+            }
+            return Response(data=data)
 
 
 class TutorProfileEdit(APIView):
@@ -154,18 +162,21 @@ class TutorProfileEdit(APIView):
             return Response({"message": "Teacher Not Found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = tutorProfileSerializer(
-            instance=tutor, data=request.data, partial=False)
+            instance=tutor, data=request.data, partial=True)
 
         if serializer.is_valid():
             serializer.save()
             data = {
                 "teacherData": serializer.data,
                 "message": "Profile Updated Successfully",
+                "status": status.HTTP_200_OK
             }
 
             return Response(data=data, status=status.HTTP_202_ACCEPTED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Course views
 
 
 class TutorCoursesView(APIView):
@@ -176,7 +187,65 @@ class TutorCoursesView(APIView):
         if serializer:
             return Response(serializer.data)
         return Response({"message": "something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    # serializer_class = CourseSerializer
+
+
+class CourseVideoView(RetrieveUpdateDestroyAPIView):
+    serializer_class = CourseVideoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self, *args, **kwargs):
+        course_id = kwargs.get('pk')
+        queryset = VideosCourse.objects.filter(
+            course=course_id, is_available=True, is_approved=True)
+        return queryset
+
+    def get(self, request, *args, **kwargs):
+        user = self.request.user
+        if user.role == 'tutor':
+
+            course_videos = self.get_queryset(*args, **kwargs)
+            serializer = self.get_serializer(course_videos, many=True)
+            data = {
+                "data": serializer.data,
+                "status": status.HTTP_200_OK
+            }
+            return Response(data=data)
+        else:
+            data = {
+                "message": "You are not authorized person",
+                "status": status.HTTP_401_UNAUTHORIZED
+            }
+            return Response(data=data)
+
+    def update(self, request, *args, **kwargs):
+        video_id = kwargs.get('pk')
+        try:
+
+            instance = VideosCourse.objects.get(id=video_id)
+            serializer = self.get_serializer(instance=instance,
+                                             data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                data = {
+                    "message": "Video updated successfully",
+                    "status": status.HTTP_200_OK
+                }
+                return Response(data=data)
+            else:
+                data = {
+                    "message": serializer.errors,
+                    "status": status.HTTP_400_BAD_REQUEST
+                }
+                return Response(data=data)
+        except VideosCourse.DoesNotExist:
+            data = {
+                "message": "Video not found",
+                "status": status.HTTP_404_NOT_FOUND
+            }
+            return Response(data=data)
+
+    # serializer_class =
+# serializer_class = CourseSerialize
 
     # def get_queryset(self):
     #     # Assuming the tutor_id is passed as a query parameter in the URL

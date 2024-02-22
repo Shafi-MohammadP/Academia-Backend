@@ -81,7 +81,7 @@ class Common_signup(APIView):
                 return Response(data=data)
         else:
             data = {
-                "Text": "Error Occured",
+                "Text": "Error Occurred",
                 "data": serializer.errors,
                 "status": status.HTTP_400_BAD_REQUEST
             }

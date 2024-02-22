@@ -17,7 +17,9 @@ urlpatterns = [
     path('categoryAdding/', CategoryAdding.as_view()),
     path('categoryUpdateAndDeletion/<int:pk>/',
          CategoryUpdatingAndDeletion.as_view()),
-    path('userBlockAndUnblock/<int:pk>/', UserBlockAndUnblock.as_view())
+    path('userBlockAndUnblock/<int:pk>/', UserBlockAndUnblock.as_view()),
+    path('videoList/', CourseVideoView.as_view()),
+    path('videoApproval/<int:pk>/', VideoApproval.as_view())
 
 
 ]

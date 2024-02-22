@@ -75,10 +75,11 @@ class myTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
 
-class CustomUserSerializer(serializers.ModelSerializer):
+class CustomUserSerializer(ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ["username", 'email', "role", "is_active"]
+        fields = ["id", "username", 'email',
+                  "role", "is_active"]
 
 
 class studentProfileSerializer(serializers.ModelSerializer):

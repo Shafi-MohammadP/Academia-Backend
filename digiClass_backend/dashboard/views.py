@@ -1,4 +1,6 @@
+
 from django.shortcuts import render
+from django.http import Http404
 from rest_framework.views import APIView
 from notifications.models import AdminNotifications
 from notifications.serializer import AdminNotificationSerializer
@@ -6,13 +8,12 @@ from rest_framework import status
 from rest_framework.response import Response
 from users.models import CustomUser, TutorProfile
 from rest_framework.generics import get_object_or_404
-from course.models import CourseCategory
+from course.models import CourseCategory, Course, VideosCourse
 from rest_framework.generics import RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView, CreateAPIView
 from tutor.models import Certificate
 from tutor.serializer import CertificateSerializer
 from rest_framework import serializers
-from course.models import Course
-from course.serializer import CourseSerializer, IndividualCourseSerializer, CourseCategorySerializer
+from course.serializer import *
 from rest_framework.permissions import IsAuthenticated
 from users.serializer import CustomUserSerializer
 # Create your views here.
@@ -114,22 +115,6 @@ class CategoryUpdateAndRetrieve(RetrieveUpdateDestroyAPIView):
         return Response({"message": "Category Deleted successfully", "data": instance.id})
 
 
-class CategoryList(ListAPIView):
-    queryset = CourseCategory.objects.filter(is_available=True)
-    serializer_class = CourseCategorySerializer
-
-
-class CertificateList(ListAPIView):
-    queryset = AdminNotifications.objects.filter(
-        is_opened=False, notification_type="register")
-    serializer_class = AdminNotificationSerializer
-
-
-class CertificateView(ListAPIView):
-    queryset = Certificate.objects.filter()
-    serializer_class = CertificateSerializer
-
-
 class CertificateApproval(RetrieveUpdateAPIView):
     queryset = Certificate.objects.all()
     serializer_class = CertificateSerializer
@@ -190,7 +175,7 @@ class CourseApproval(RetrieveUpdateAPIView):
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.is_available = not instance.is_available
-        instance.save()
+        instance.save(update_fields=['is_available'])
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
@@ -289,3 +274,48 @@ class UserBlockAndUnblock(RetrieveUpdateDestroyAPIView):
             "status": status.HTTP_200_OK
         }
         return Response(data=data)
+
+
+class VideoApproval(RetrieveUpdateDestroyAPIView):
+    queryset = VideosCourse.objects.all()
+    serializer_class = CourseVideoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, *args, **kwargs):
+        video_id = kwargs.get('pk')
+        try:
+            video_instance = VideosCourse.objects.get(id=video_id)
+            video_instance.is_approved = not video_instance.is_approved
+            video_instance.save()
+            data = {
+                "message": f'Video Blocked Successfully {video_instance.video_title}',
+                'status': status.HTTP_200_OK
+            }
+            return Response(data=data)
+        except VideosCourse.DoesNotExist:
+            data = {
+                "message": "video not found",
+                "status": status.HTTP_404_NOT_FOUND
+            }
+            return Response(data=data)
+
+
+class CategoryList(ListAPIView):
+    queryset = CourseCategory.objects.filter(is_available=True)
+    serializer_class = CourseCategorySerializer
+
+
+class CertificateList(ListAPIView):
+    queryset = AdminNotifications.objects.filter(
+        is_opened=False, notification_type="register")
+    serializer_class = AdminNotificationSerializer
+
+
+class CertificateView(ListAPIView):
+    queryset = Certificate.objects.filter()
+    serializer_class = CertificateSerializer
+
+
+class CourseVideoView(ListAPIView):
+    queryset = VideosCourse.objects.all()
+    serializer_class = VideoWithCourseDetails

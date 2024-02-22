@@ -29,7 +29,7 @@ class CustomUser(AbstractUser):
 
 class StudentProfile(models.Model):
     user = models.OneToOneField(
-        CustomUser, on_delete=models.CASCADE, null=True)
+        CustomUser, on_delete=models.CASCADE, related_name="student_user", null=True)
     bio = models.TextField(blank=True, null=True)
     qualification = models.CharField(max_length=100, blank=True, null=True)
     profile_photo = models.FileField(
@@ -41,7 +41,8 @@ class StudentProfile(models.Model):
 
 
 class TutorProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        CustomUser, on_delete=models.CASCADE, related_name="tutor_user")
     bio = models.TextField(blank=True, null=True)
     qualification = models.CharField(max_length=100, default="")
     profile_photo = models.FileField(

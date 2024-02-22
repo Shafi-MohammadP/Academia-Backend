@@ -7,7 +7,8 @@ urlpatterns = [
     path('profileEdit/<int:pk>/', TutorProfileEdit.as_view()),
     path('certificateView/<int:tutor_id>/', CertificateView.as_view()),
     path('TutorCoursesView/<int:pk>/', TutorCoursesView.as_view()),
-    path('tutorCertificate/<int:tutor_id>/', TeacherCertificate.as_view())
+    path('tutorCertificate/<int:tutor_id>/', TeacherCertificate.as_view()),
+    path('course_video/<int:pk>/', CourseVideoView.as_view()),
 
 
 ]

@@ -31,3 +31,7 @@ def send_certificate_uploaded_notification(sender, instance, created, *args, **k
                 "message": notification_text
             }
         )
+
+
+# @receiver(post_save, sender =Certificate)
+# def send_certificat

@@ -13,3 +13,5 @@ typing_extensions==4.8.0
 tzdata==2023.3
 python-decouple==3.8
 phonenumbers==8.13.26
+stripe === 8.0.0
+daphne === 4.1.0

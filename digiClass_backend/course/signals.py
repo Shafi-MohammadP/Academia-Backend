@@ -13,7 +13,7 @@ import json
 from notifications.models import Notifications
 from users.models import CustomUser
 
-
+additional_data = None
 channel_layer = get_channel_layer()
 
 
@@ -31,5 +31,57 @@ def send_course_created_notification(sender, instance, created, *args, **kwargs)
             {
                 'type': 'create_notification',
                 'message': notification_text
+            }
+        )
+
+
+@receiver(post_save, sender=Course)
+def send_course_approval_notification(sender, instance, *args, **kwargs):
+    global additional_data
+    if kwargs.get('update_fields') and 'is_available' in kwargs['update_fields']:
+        user = CustomUser.objects.get(email=instance.tutor_id.user)
+        print(user.id, "--------------------------------->>>>")
+        if instance.is_available:
+            notification_text_for_tutor = f"New Course {instance.course_name}  available now"
+            notification_text_for_student = f"New Course {instance.course_name} available now"
+        else:
+            notification_text_for_tutor = f"Course {instance.course_name}  is now unavailable."
+            notification_text_for_student = f"Course {instance.course_name} is now unavailable"
+
+        print(user, "user----------------------------------->>>>")
+        Notifications.objects.create(
+            user=user, text=notification_text_for_tutor, course=instance)
+
+        async_to_sync(channel_layer.group_send)(
+            "tutor_group",
+            {
+                "type": "create_tutor_notification",
+                "message": notification_text_for_tutor,
+
+            }
+        )
+        async_to_sync(channel_layer.group_send)(
+            "student_group",
+            {
+                "type": "create_student_notification",
+                "message": notification_text_for_student,
+
+            }
+        )
+
+
+@receiver(post_save, sender=VideosCourse)
+def send_video_added_notification(sender, instance, created, *args, **kwargs):
+    if created:
+        notification_text = f'New Video Uploaded by {instance.course.tutor_id.user.username}'
+        admin_user = CustomUser.objects.filter(is_superuser=True).first()
+        Notifications.objects.create(user=admin_user, text=notification_text)
+        print(
+            f"Signal Notification from  {instance}--------------------------------------->>>>")
+        async_to_sync(channel_layer.group_send)(
+            "admin_group",
+            {
+                "type": "create_notification",
+                "message": notification_text
             }
         )

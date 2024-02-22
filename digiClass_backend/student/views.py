@@ -3,8 +3,11 @@ from rest_framework.views import APIView
 from users.models import StudentProfile
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework import status
+from rest_framework.generics import RetrieveUpdateAPIView
+from rest_framework import generics
 from users.serializer import studentProfileSerializer
+from course.models import *
+from course.serializer import *
 # Create your views
 
 
@@ -12,20 +15,20 @@ class StudentProfileEdit(APIView):
 
     def patch(self, request, *args, **kwargs):
         student_id = kwargs.get('pk')
-        # print(student_id, "id----------------->>>>")
-        # print(request.data, "------------------------------------------->>>>>")
         try:
             student = StudentProfile.objects.get(pk=student_id)
         except StudentProfile.DoesNotExist:
-            return Response({"message": "Student Not Found", "status": status.HTTP_404_NOT_FOUND})
+            data = {
+                "message": "Student not found"
+            }
+            return Response(data=data)
 
-        # Update the student profile with the new data
         serializer = studentProfileSerializer(
             instance=student, data=request.data, partial=False)
 
         if serializer.is_valid():
             serializer.save()
-            # print(serializer.data, "Mohammad")
+
             data = {
                 "userData": serializer.data,
                 "message": "Profile Updated Successfully",
@@ -35,7 +38,11 @@ class StudentProfileEdit(APIView):
             }
             return Response(data=data)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            data = {
+                "message": serializer.errors,
+                "status": status.HTTP_400_BAD_REQUEST
+            }
+            return Response(data=data)
 
 
 class StudentProfileShow(APIView):
@@ -56,3 +63,84 @@ class StudentProfileShow(APIView):
             "status": status.HTTP_200_OK
         }
         return Response(data=data, status=status.HTTP_200_OK)
+
+
+class CourseDetailView(RetrieveUpdateAPIView):
+    queryset = Course.objects.all()
+    serializer_class = IndividualCourseSerializer
+
+
+class FreeCourseView(generics.ListAPIView):
+    queryset = VideosCourse.objects.filter(
+        is_available=True, is_approved=True, is_free_of_charge=True)
+    serializer_class = CourseWithFullDetails
+
+
+class CourseDetailsBeforePurchase(generics.RetrieveAPIView):
+    serializer_class = CourseVideoSerializer
+
+    def get_queryset(self):
+        return VideosCourse.objects.filter(
+            is_available=True, is_approved=True)
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        course_id = self.kwargs.get('course_id')
+        if course_id:
+            queryset = queryset.filter(course=course_id).order_by('id')
+            instances = queryset.all()
+            if not instances:
+                return Response([], status=status.HTTP_200_OK)
+
+            serializer = self.get_serializer(instances, many=True)
+            return Response(serializer.data)
+
+
+class PurchasedCourseRetrieval(generics.ListAPIView):
+    serializer_class = PurchaseCourseSerializer
+
+    def get_queryset(self):
+        student_id = self.kwargs.get('pk')
+        print(student_id, "---------------------------------------")
+        return CoursePurchase.objects.filter(student=student_id)
+
+
+class PurchasedCourseDetails(generics.ListAPIView):
+    serializer_class = PurchasedCourseDetailsSerializer
+
+    def get_queryset(self):
+        student_id = self.kwargs.get('pk')
+        print(student_id, "---------------------------------------")
+        return CoursePurchase.objects.filter(student=student_id)
+
+
+# class CourseLikesAndUnLikes(RetrieveUpdateAPIView):
+#     serializer_class = CourseSerializer
+
+#     def get_queryset(self):
+#         course_id = self.kwargs.get("pk")
+#         queryset = Course.objects.filter(id=course_id)
+#         print(queryset, "ssss")
+#         return queryset
+
+#     def patch(self, request, *args, **kwargs):
+#         instance = self.get_queryset().first()
+#         action = request.data.get("action")
+#         if action == "like":
+#             instance.likes += 1
+#             message = "Course Likes Successfully"
+#         elif action == "unLike":
+#             instance.likes = max(0, instance.likes - 1)
+#             message = 'Course unLiked Successfully'
+#         else:
+#             return Response({"error": "Invalid Action"}, status=status.HTTP_400_BAD_REQUEST)
+#         request.data.pop('action', None)
+#         serializer = self.get_serializer(
+#             instance, data=request.data, partial=True)
+#         serializer.is_valid(raise_exception=True)
+#         instance.save()
+#         data = {
+#             "message": message,
+#             "status": status.HTTP_200_OK
+#         }
+#         return Response(data=data)
