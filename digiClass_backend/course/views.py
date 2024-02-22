@@ -182,7 +182,6 @@ class updateCourse(RetrieveUpdateAPIView):
         serializer.save()
 
 
-# stripe.api_key = "sk_test_51OFqIQSJiD5G4hPsOp9WDdHeFzGx7va82AmGoZfCXQWfdZILiQgIRY87lYDMQxiy4UoPzb79c7LopwQgNW6aNFdH00cGrA0FV7"
 stripe.api_key = config('STRIP_API_KEY')
 
 
