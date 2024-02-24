@@ -123,12 +123,12 @@ def ActivateAccountView(request, uidb64, token):
                 print("tutor deleteion")
                 return Response(student_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        print(user, "user activated succesfulyy")
-        message = "Congrats, You have been succesfully registered"
-        redirect_url = 'http://localhost:5173/Login/' + \
-            '?message=' + message + '?token' + token
+        print(user, "user activated successfully")
+        message = "Congrats, You have been successfully registered"
+        redirect_url = f'http://localhost:5173/Login/?message={message}'
+
     else:
-        print("Something FAiledd")
+        print("Something Failed")
         message = 'Invalid activation link'
         redirect_url = 'http://localhost:5173/Login/' + '?message=' + message
 

@@ -85,3 +85,16 @@ def send_video_added_notification(sender, instance, created, *args, **kwargs):
                 "message": notification_text
             }
         )
+
+
+@receiver(post_save, sender=VideoComment)
+def send_comment_added_notification(sender, instance, created, *args, **kwargs):
+    if created:
+        notification_text = f"{instance.video.id}"
+        async_to_sync(channel_layer.group_send)(
+            "user_group",
+            {
+                "type": "create_comment_update",
+                "message": f"{instance.video.id}"
+            }
+        )

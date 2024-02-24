@@ -92,8 +92,15 @@ class CourseWithAllCount(ModelSerializer):
         fields = "__all__"
 
 
+class CoursePurchaseSerializer(ModelSerializer):
+    class Meta:
+        model = CoursePurchase
+        fields = "__all__"
+
+
 class PurchaseCourseSerializer(ModelSerializer):
     student = studentProfileSerializer()
+    course = CommonCourseSerializer()
 
     class Meta:
         model = CoursePurchase
@@ -184,9 +191,12 @@ class VideoCommentListSerializer(serializers.ModelSerializer):
     user = CustomUserSerializer()
 
     def get_student_profile_photo(self, obj):
-        student_profile = obj.user.student_user
-        if student_profile and student_profile.profile_photo:
-            return student_profile.profile_photo.url
+        try:
+            student_profile = obj.user.student_user
+            if student_profile and student_profile.profile_photo:
+                return student_profile.profile_photo.url
+        except StudentProfile.DoesNotExist:
+            pass
         return None
 
     def get_tutor_profile_photo(self, obj):

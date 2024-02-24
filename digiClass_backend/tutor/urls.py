@@ -9,6 +9,10 @@ urlpatterns = [
     path('TutorCoursesView/<int:pk>/', TutorCoursesView.as_view()),
     path('tutorCertificate/<int:tutor_id>/', TeacherCertificate.as_view()),
     path('course_video/<int:pk>/', CourseVideoView.as_view()),
+    path('course_video_retrieval/<int:pk>/', CourseVideoRetrieval.as_view()),
+    path('certificate_confirmation/<int:pk>/',
+         CertificateConfirmation.as_view()),
+    path('purchased_student/<int:pk>/', PurchasedStudentDetails.as_view())
 
 
 ]

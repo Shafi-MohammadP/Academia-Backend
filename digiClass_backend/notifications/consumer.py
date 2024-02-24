@@ -134,3 +134,47 @@ class StudentNotification(AsyncWebsocketConsumer):
             }))
         except Exception as e:
             print("Error in create admin notifications", e)
+
+
+class CommentUpdating(AsyncWebsocketConsumer):
+    async def connect(self):
+        from notifications.models import Notifications
+        try:
+            self.group_name = 'user_group'
+            await self.channel_layer.group_add(
+                self.group_name,
+                self.channel_name
+            )
+            print('connected ')
+            await self.accept()
+        except Exception as e:
+            print("Error in connect in comment", e)
+
+    async def disconnect(self, close_code):
+        try:
+            await self.channel_layer.group_discard(
+                self.group_name,
+                self.channel_name
+            )
+        except Exception as e:
+            print("Error in disconnect comment", e)
+
+    async def receive(self, text_data):
+        try:
+            message = json.loads(text_data)
+            print("comment message:", message)
+        except Exception as e:
+            print("Error in receive comment:", e)
+
+    async def create_comment_update(self, event):
+        try:
+            message = event['message']
+
+            await self.send(json.dumps({
+
+                'message': message,
+
+
+            }))
+        except Exception as e:
+            print("Error in create admin notifications", e)

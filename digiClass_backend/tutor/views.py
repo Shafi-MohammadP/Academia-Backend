@@ -9,12 +9,42 @@ from rest_framework.response import Response
 from users.serializer import tutorProfileSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import RetrieveUpdateDestroyAPIView
-from course.models import Course, VideosCourse
-from course.serializer import IndividualCourseSerializer, CourseVideoSerializer
+from course.models import Course, VideosCourse, CoursePurchase
+from course.serializer import IndividualCourseSerializer, CourseVideoSerializer, CourseSerializer, PurchaseCourseSerializer
 from rest_framework import generics
+from django.shortcuts import get_object_or_404
 # Create your views here.
 
 # Profile Views
+
+
+class CertificateConfirmation(APIView):
+    def get(self, *args, **kwargs):
+        tutor_id = kwargs.get('pk')
+        tutor_instance = get_object_or_404(TutorProfile, id=tutor_id)
+        if tutor_instance.is_certificate == True:
+            data = {
+                "message": True
+            }
+            return Response(data=data, status=status.HTTP_200_OK)
+        else:
+            data = {
+                "message": False
+            }
+            return Response(data=data, status=status.HTTP_200_OK)
+        # try:
+        #     certificate = Certificate.objects.filter(
+        #         tutor=tutor_id, is_approved=False)
+        #     data = {
+        #         "message": True
+        #     }
+        #     return Response(data=data, status=status.HTTP_200_OK)
+        # except Certificate.DoesNotExist:
+
+        #     data = {
+        #         "message": False
+        #     }
+        #     return Response(data=data, status=status.HTTP_200_OK)
 
 
 class TutorProfileShow(APIView):
@@ -103,6 +133,7 @@ class TeacherFormSubmission(APIView):
     def post(self, request, *args, **kwargs):
 
         tutor_id = kwargs.get('tutor_id')
+        print(request.data, "--------------------->>")
         if not TutorProfile.objects.filter(pk=tutor_id).exists():
             data = {
                 "message": "Tutor not found",
@@ -183,7 +214,7 @@ class TutorCoursesView(APIView):
     def get(self, request, *args, **kwargs):
         tutor_id = kwargs.get('pk')
         courses = Course.objects.filter(tutor_id=tutor_id, is_available=True)
-        serializer = IndividualCourseSerializer(courses, many=True)
+        serializer = CourseSerializer(courses, many=True)
         if serializer:
             return Response(serializer.data)
         return Response({"message": "something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -267,3 +298,21 @@ class CourseVideoView(RetrieveUpdateDestroyAPIView):
     #     except Course.DoesNotExist:
     #         content = {'detail': 'Not found.'}
     #         return Response(content, status=status.HTTP_404_NOT_FOUND)
+
+
+class CourseVideoRetrieval(generics.ListAPIView):
+    serializer_class = CourseVideoSerializer
+
+    def get_queryset(self):
+        course_id = self.kwargs.get('pk')
+        queryset = VideosCourse.objects.filter(course=course_id)
+        return queryset
+
+
+class PurchasedStudentDetails(generics.ListAPIView):
+    serializer_class = PurchaseCourseSerializer
+
+    def get_queryset(self):
+        tutor_id = self.kwargs.get('pk')
+        queryset = CoursePurchase.objects.filter(tutor=tutor_id)
+        return queryset

@@ -1,3 +1,4 @@
+from django.utils.dateparse import parse_datetime
 from rest_framework import status
 from rest_framework.generics import RetrieveUpdateAPIView
 import stripe
@@ -21,7 +22,19 @@ from django.http import Http404
 from decouple import config
 from django.shortcuts import get_object_or_404
 from course.permissions import IsReviewAuthor
+from channels.layers import get_channel_layer
 # Create your views here.
+
+
+async def send_comment_update(videoId, message):
+    channel_layer = get_channel_layer()
+    group_name = f"video_{videoId}"
+    await channel_layer.group_send(
+        "users_group", {
+            'type': "create_comment_update",
+            'message': message
+        }
+    )
 
 
 class CourseAdding(CreateAPIView):
@@ -219,7 +232,7 @@ class StripePaymentApi(APIView):
 
 class PurchaseCourseApi(CreateAPIView):
     queryset = CoursePurchase.objects.all()
-    serializer_class = PurchaseCourseSerializer
+    serializer_class = CoursePurchaseSerializer
     permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
@@ -232,10 +245,10 @@ class PurchaseCourseApi(CreateAPIView):
                 id=course_id, is_available=True)
             student_instance = StudentProfile.objects.get(id=student_id)
             tutor_instance = TutorProfile.objects.get(id=tutor_id)
-
+            tutor_instance.wallet += course_instance.price
+            tutor_instance.save()
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-
             self.perform_create(serializer, course_instance,
                                 student_instance, tutor_instance)
 
@@ -508,9 +521,47 @@ class VideoCommentApi(APIView):
                 "message": "Comment added successfully"
 
             }
+            video_id = request.data.get('video')
+            message = 'New comment added!'
+            async_to_sync(send_comment_update)(video_id, message)
             return Response(data=data, status=status.HTTP_201_CREATED)
         else:
             return Response({"message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, *args, **kwargs):
+        created_at = request.data.get('created_at')
+        user_id = request.data.get('user')
+        video_id = request.data.get('video')
+
+        # Parse the created_at string to a datetime object
+        created_at_dt = parse_datetime(created_at)
+
+        try:
+            comment_instance = VideoComment.objects.get(
+                created_at=created_at_dt,
+                user__id=user_id,
+                video=video_id
+            )
+        except VideoComment.DoesNotExist:
+            data = {
+                "message": "Comment not found."
+            }
+            return Response(data=data, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = VideoCommentSerializer(
+            instance=comment_instance, data=request.data, partial=True)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            data = {
+                "message": "Comment updated successfully."
+            }
+            return Response(data=data, status=status.HTTP_200_OK)
+        else:
+            data = {
+                "message": serializer.errors
+            }
+            return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
 
 # button removing
 
