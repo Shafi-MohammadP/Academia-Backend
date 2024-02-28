@@ -24,6 +24,7 @@ from django.shortcuts import get_object_or_404
 from course.permissions import IsReviewAuthor
 from channels.layers import get_channel_layer
 # Create your views here.
+fronted_url = config('frontend_urls')
 
 
 async def send_comment_update(videoId, message):
@@ -207,8 +208,8 @@ class StripePaymentApi(APIView):
             courseId = data.get('courseId')
             course_price = data.get('course_price')
             tutor_id = data.get('tutor_id')
-            success_url = f'http://localhost:5173/payment/success?userId={userId}&courseId={courseId}&tutorId={tutor_id}&xyzeconmy/'
-            cancel_url = 'http://localhost:5173/payment/canceled=true'
+            success_url = f'{fronted_url}payment/success?userId={userId}&courseId={courseId}&tutorId={tutor_id}&xyzeconmy/'
+            cancel_url = f'{fronted_url}payment/canceled=true'
             session = stripe.checkout.Session.create(
                 line_items=[{
                     'price_data': {
