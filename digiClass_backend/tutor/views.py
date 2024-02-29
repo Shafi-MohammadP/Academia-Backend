@@ -227,7 +227,7 @@ class CourseVideoView(RetrieveUpdateDestroyAPIView):
     def get_queryset(self, *args, **kwargs):
         course_id = kwargs.get('pk')
         queryset = VideosCourse.objects.filter(
-            course=course_id, is_available=True, is_approved=True)
+            course=course_id, is_available=True, is_approved=True).order_by('-is_free_of_charge')
         return queryset
 
     def get(self, request, *args, **kwargs):
