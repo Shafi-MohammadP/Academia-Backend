@@ -36,6 +36,7 @@ from .models import *
 from rest_framework import status
 from django.contrib.auth import authenticate
 # Create your views here.
+frontend_url = config('frontend_urls')
 
 
 class Common_signup(APIView):
@@ -125,12 +126,12 @@ def ActivateAccountView(request, uidb64, token):
 
         print(user, "user activated successfully")
         message = "Congrats, You have been successfully registered"
-        redirect_url = f'http://localhost:5173/Login/?message={message}'
+        redirect_url = f'{frontend_url}Login/?message={message}'
 
     else:
         print("Something Failed")
         message = 'Invalid activation link'
-        redirect_url = 'http://localhost:5173/Login/' + '?message=' + message
+        redirect_url = f'{frontend_url}Login/' + '?message=' + message
 
     return HttpResponseRedirect(redirect_url)
 
