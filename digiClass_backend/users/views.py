@@ -50,7 +50,6 @@ class Common_signup(APIView):
 
         if serializer.is_valid():
             user = serializer.save()
-            # print(user.pk, 'pkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk')
             current_site = get_current_site(request)
             mail_subject = 'Activate Your Account'
             message = render_to_string('user/Account_activation.html', {
@@ -93,12 +92,11 @@ class Common_signup(APIView):
 def ActivateAccountView(request, uidb64, token):
     try:
         uid = urlsafe_base64_decode(uidb64).decode()
-        # print(uid, "uidddddddddddddddddddddddddddddddddddddddddddd")
+
         user = CustomUser._default_manager.get(id=uid)
     except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
         user = None
-    # print(uid, user.pk, token,
-    #       "gptttttttttttttttttttttttttttttttttttttttttttttttttttttttt")
+
     if user is not None and default_token_generator.check_token(user, token):
         user.is_active = True
         user.save()
@@ -108,20 +106,20 @@ def ActivateAccountView(request, uidb64, token):
             student_serializer = studentProfileSerializer(data=student_data)
             if student_serializer.is_valid():
                 student_serializer.save()
-                print("student creation")
+
             else:
                 user.delete()
-                print("studente deletion")
+
                 return Response(student_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         elif user.role == 'tutor':
             tutor_data = {'user': user.id}
             tutor_serializer = tutorProfileSerializer(data=tutor_data)
             if tutor_serializer.is_valid():
                 tutor_serializer.save()
-                print("tutor creaion")
+
             else:
                 user.delete()
-                print("tutor deleteion")
+
                 return Response(student_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         print(user, "user activated successfully")
@@ -136,97 +134,74 @@ def ActivateAccountView(request, uidb64, token):
     return HttpResponseRedirect(redirect_url)
 
 
-# class TutorSignUp(APIView):
-#     def post(self, request):
-#         serializer = SignUpSerializer(
-#             data=request.data, context={'role': 'tutor'})
-
-#         check = request.data['email']
-#         if CustomUser.objects.filter(email=check).exists():
-#             data = {
-#                 "Text": "Email already exist",
-#                 "status": 400
-#             }
-#             return Response(data=data)
-
-#         if serializer.is_valid():
-#             user_instance = serializer.save()
-#             # Assuming 'user' is the field name in TutorProfile
-#             tutor_data = {'user': user_instance.id}
-#             tutor_serializer = tutorProfileSerializer(data=tutor_data)
-
-#             if tutor_serializer.is_valid():
-#                 tutor_serializer.save()
-#                 data = {"Text": "Account Created Successfully", "status": 200}
-#                 return Response(data=data)
-#             else:
-#                 # If TutorProfile creation fails, delete the associated CustomUser
-#                 user_instance.delete()
-#                 return Response(tutor_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 class GooglLogin(APIView):
     def post(self, request):
         email = request.data.get('email')
         username = request.data.get("username")
         password = request.data.get("password")
-        print(email, username, password,
-              '------------------------------------<<<<<<<<<<<<<<<<<<<<<<<<<<')
 
         existing_user = CustomUser.objects.filter(email=email).first()
-        print(existing_user, "--------------------------------------------")
-        # print(existing_user.role, "exisssssssssssssssssssssss")
+
         if existing_user:
             existing_user.is_google = True
+            existing_user.save()
             token = create_jwt_token(existing_user)
             data = {
                 'status': 200,
                 'token': token,
-                'Text': "Logined Succesfully"
+                'Text': "Login Successful"
             }
             return Response(data=data, status=status.HTTP_201_CREATED)
-        # Create an instance of the serializer with request data
+
         serializer = userGoogleSerializer(data=request.data)
 
-        # Check if the data is valid before saving
-        if serializer.is_valid():
-            # Check if the user already exists
+        if serializer.is_valid(raise_exception=True):
+
             user, created = CustomUser.objects.get_or_create(
                 email=email, defaults={'username': username})
 
             if created:
-                # If the user is created, set additional attributes and password
+
                 user.is_active = True
                 user.username = username
                 user.is_google = True
-                user.role = 'student'  # You might want to handle this based on your activation logic
+                user.role = 'student'
                 user.save()
-                print(user.role, '-------------------------------------->>>>')
-
-            # Authenticate the user
-            # user = authenticate(request, email=email, password=password)
 
             if user is not None:
-                # Generate a token for the user
-                token = create_jwt_token(user)
 
-                data = {
-                    "Text": "Logined Successfully",
-                    'status': 200,
-                    'token': token,
-                    'user': serializer.data,
+                student_data = {'user': user.id}
+                student_serializer = studentProfileSerializer(
+                    data=student_data)
+                if student_serializer.is_valid():
+                    student_serializer.save()
+                    token = create_jwt_token(user)
 
-                }
-                return Response(data=data, status=status.HTTP_201_CREATED)
+                    data = {
+                        "Text": "Login Successful",
+                        'status': 200,
+                        'token': token,
+                        'user': serializer.data,
 
-        # If the serializer is not valid, return validation errors
-        data = {
-            "Text": serializer.errors,
-            "status": 400
-        }
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    }
+
+                    return Response(data=data, status=status.HTTP_201_CREATED)
+                else:
+                    user.delete()
+                    data = {
+                        "Text": "Google Login Failed",
+                        "status": status.HTTP_400_BAD_REQUEST,
+                        "error": student_serializer.errors
+                    }
+
+                    return Response(data=data)
+        else:
+
+            data = {
+                "Text": serializer.errors,
+                "status": 400
+            }
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 def create_jwt_token(user):
@@ -234,18 +209,18 @@ def create_jwt_token(user):
 
     refresh['email'] = user.email
     refresh['id'] = user.id
-    refresh['name'] = user.username
+    refresh['username'] = user.username
     refresh['role'] = user.role
     refresh['is_admin'] = user.is_superuser
     refresh['is_active'] = user.is_active
     refresh['is_google'] = user.is_google
 
-    access_token = str(refresh.access_token)  # type: ignore
-    refresh_token = str(refresh)
+    access = str(refresh.access_token)
+    refresh = str(refresh)
 
     return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
+        "access": access,
+        "refresh": refresh,
     }
 
 
@@ -280,13 +255,3 @@ class tutorListing(ListAPIView):
 class NewTutoraLisiting(ListAPIView):
     queryset = TutorProfile.objects.all()
     serializer_class = tutorProfileSerializer
-
-
-# class Authentication(APIView):
-#     permission_classes = (IsAuthenticated,)
-
-#     def get(self, request):
-#         content = {'user': str(request.user), 'userid': str(request.user.id), 'email': str(
-#             request.user.email), 'is_active': str(request.user.is_active)}
-#         return Response(content)
-#     print('chekked=========================================<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>')
