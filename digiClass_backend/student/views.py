@@ -27,6 +27,10 @@ class StudentProfileEdit(APIView):
             instance=student, data=request.data, partial=False)
 
         if serializer.is_valid():
+            if 'username' in request.data:
+                user_instance = student.user
+                user_instance.username = request.data['username']
+                user_instance.save()
             serializer.save()
 
             data = {
@@ -101,7 +105,7 @@ class PurchasedCourseRetrieval(generics.ListAPIView):
 
     def get_queryset(self):
         student_id = self.kwargs.get('pk')
-        print(student_id, "---------------------------------------")
+
         return CoursePurchase.objects.filter(student=student_id)
 
 
@@ -110,37 +114,5 @@ class PurchasedCourseDetails(generics.ListAPIView):
 
     def get_queryset(self):
         student_id = self.kwargs.get('pk')
-        print(student_id, "---------------------------------------")
+
         return CoursePurchase.objects.filter(student=student_id)
-
-
-# class CourseLikesAndUnLikes(RetrieveUpdateAPIView):
-#     serializer_class = CourseSerializer
-
-#     def get_queryset(self):
-#         course_id = self.kwargs.get("pk")
-#         queryset = Course.objects.filter(id=course_id)
-#         print(queryset, "ssss")
-#         return queryset
-
-#     def patch(self, request, *args, **kwargs):
-#         instance = self.get_queryset().first()
-#         action = request.data.get("action")
-#         if action == "like":
-#             instance.likes += 1
-#             message = "Course Likes Successfully"
-#         elif action == "unLike":
-#             instance.likes = max(0, instance.likes - 1)
-#             message = 'Course unLiked Successfully'
-#         else:
-#             return Response({"error": "Invalid Action"}, status=status.HTTP_400_BAD_REQUEST)
-#         request.data.pop('action', None)
-#         serializer = self.get_serializer(
-#             instance, data=request.data, partial=True)
-#         serializer.is_valid(raise_exception=True)
-#         instance.save()
-#         data = {
-#             "message": message,
-#             "status": status.HTTP_200_OK
-#         }
-#         return Response(data=data)

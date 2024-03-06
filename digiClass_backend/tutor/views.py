@@ -32,25 +32,11 @@ class CertificateConfirmation(APIView):
                 "message": False
             }
             return Response(data=data, status=status.HTTP_200_OK)
-        # try:
-        #     certificate = Certificate.objects.filter(
-        #         tutor=tutor_id, is_approved=False)
-        #     data = {
-        #         "message": True
-        #     }
-        #     return Response(data=data, status=status.HTTP_200_OK)
-        # except Certificate.DoesNotExist:
-
-        #     data = {
-        #         "message": False
-        #     }
-        #     return Response(data=data, status=status.HTTP_200_OK)
 
 
 class TutorProfileShow(APIView):
 
     def get(self, request, user_id):
-        print(user_id, '-------------------------->>')
         try:
             tutorProfile = TutorProfile.objects.get(user=user_id)
         except TutorProfile.DoesNotExist:
@@ -76,7 +62,7 @@ class TeacherCertificate(RetrieveUpdateDestroyAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         tutor_id = kwargs.get('tutor_id')
-        print(tutor_id, "------------------->>>")
+
         if not TutorProfile.objects.filter(pk=tutor_id).exists():
             data = {
                 "message": "Tutor not found",
@@ -133,7 +119,7 @@ class TeacherFormSubmission(APIView):
     def post(self, request, *args, **kwargs):
 
         tutor_id = kwargs.get('tutor_id')
-        print(request.data, "--------------------->>")
+
         if not TutorProfile.objects.filter(pk=tutor_id).exists():
             data = {
                 "message": "Tutor not found",
@@ -169,10 +155,10 @@ class TeacherFormSubmission(APIView):
 
 class CertificateView(APIView):
     def get(self, request, tutor_id):
-        print(tutor_id, "------------------------------------>>>")
+
         try:
             certificate = Certificate.objects.get(tutor=tutor_id)
-            print(certificate, "certificate------------------------------------->>>>>")
+
             serializer = CertificateTeacherSerializer(certificate)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Certificate.DoesNotExist:
@@ -196,6 +182,10 @@ class TutorProfileEdit(APIView):
             instance=tutor, data=request.data, partial=True)
 
         if serializer.is_valid():
+            if 'username' in request.data:
+                user_instance = tutor.user
+                user_instance.username = request.data['username']
+                user_instance.save()
             serializer.save()
             data = {
                 "teacherData": serializer.data,
@@ -274,30 +264,6 @@ class CourseVideoView(RetrieveUpdateDestroyAPIView):
                 "status": status.HTTP_404_NOT_FOUND
             }
             return Response(data=data)
-
-    # serializer_class =
-# serializer_class = CourseSerialize
-
-    # def get_queryset(self):
-    #     # Assuming the tutor_id is passed as a query parameter in the URL
-    #     tutor_id = self.request.query_params.get('pk')
-
-    #     # You may need to adjust the filtering logic based on your model structure
-    #     queryset = Course.objects.filter(tutor_id=tutor_id, is_available=False)
-    #     print(queryset, "q--------------------------->>>>>>>>>>>>>>>>>")
-
-    #     return queryset
-
-    # def get_object(self):
-    #     try:
-    #         # Retrieve a specific course based on the primary key
-    #         obj = Course.objects.filter(pk=self.kwargs['pk'])
-    #         print(obj, "-----------------<<<<")
-    #         self.check_object_permissions(self.request, obj)
-    #         return obj
-    #     except Course.DoesNotExist:
-    #         content = {'detail': 'Not found.'}
-    #         return Response(content, status=status.HTTP_404_NOT_FOUND)
 
 
 class CourseVideoRetrieval(generics.ListAPIView):

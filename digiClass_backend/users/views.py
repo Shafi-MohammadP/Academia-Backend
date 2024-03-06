@@ -1,3 +1,4 @@
+import random
 from django.shortcuts import render
 from urllib.parse import quote
 from rest_framework.authtoken.models import Token
@@ -202,6 +203,59 @@ class GooglLogin(APIView):
                 "status": 400
             }
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResetPassword(APIView):
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        try:
+            user_instance = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User doesn't exist with this email"}, status=status.HTTP_400_BAD_REQUEST)
+        otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+
+        try:
+            user_instance.otp = otp
+            user_instance.save()
+            email_subject = "Reset Password"
+            email_message = f"OTP for Resetting the password {otp}"
+            email = EmailMessage(email_subject, email_message,
+                                 to=[user_instance.email])
+            email.send(fail_silently=False)
+            return Response({"message": "We've Sent an OTP to you email address"}, status=status.HTTP_200_OK)
+        except Exception as e:
+
+            return Response({"error": "Error when Sending mail"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def patch(self, request, *args, **kwargs):
+        email = request.data.get("email")
+        otp = request.data.get('otp')
+        user_instance = get_object_or_404(CustomUser, email=email)
+        entered_otp = ''.join(otp)
+        if user_instance.otp == entered_otp:
+            return Response({"message": "otp verified successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "You entered wrong otp"}, status.HTTP_203_NON_AUTHORITATIVE_INFORMATION)
+
+
+class PasswordChange(APIView):
+    def patch(self, request, *args, **kwargs):
+        password = request.data.get('password')
+        password2 = request.data.get('confirmPassword')
+        user_id = kwargs.get('pk')
+        try:
+            user_instance = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if password == password2:
+            user_instance.set_password(password)
+            user_instance.otp = None
+            user_instance.save()
+            user_serializer = CustomUserSerializer(user_instance)
+            return Response({"message": "Password changed successfully", "user": user_serializer.data}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Passwords do not match"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 def create_jwt_token(user):
