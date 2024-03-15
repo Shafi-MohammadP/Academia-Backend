@@ -1,3 +1,4 @@
+from rest_framework_simplejwt.authentication import JWTAuthentication
 import random
 from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import render
@@ -234,22 +235,32 @@ class ResetPassword(APIView):
         user_instance = get_object_or_404(CustomUser, email=email)
         entered_otp = ''.join(otp)
         if user_instance.otp == entered_otp:
-            return Response({"message": "otp verified successfully"}, status=status.HTTP_200_OK)
+            refresh = RefreshToken.for_user(user_instance)
+            token = {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+            return Response({"message": "otp verified successfully", "token": token}, status=status.HTTP_200_OK)
         else:
-            return Response({"error": "You entered wrong otp"}, status.HTTP_203_NON_AUTHORITATIVE_INFORMATION)
+            return Response({"error": "You entered wrong otp"}, status=status.HTTP_203_NON_AUTHORITATIVE_INFORMATION)
 
 
 class PasswordChange(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def patch(self, request, *args, **kwargs):
         password = request.data.get('password')
         password2 = request.data.get('confirmPassword')
-        user_id = kwargs.get('pk')
+        user_id = request.user.id
+
         try:
             user_instance = CustomUser.objects.get(id=user_id)
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
         if password == password2:
+
             user_instance.set_password(password)
             user_instance.otp = None
             user_instance.save()
